@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Suivi Prod & Primes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f1f5f9;
+        }
+        /* Masquer les flèches sur les champs numériques */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.2s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased pb-14 selection:bg-indigo-100 selection:text-indigo-900">
+
+    <!-- EN-TÊTE FIXE AVEC BARRE KPI PERMANENTE -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+        <div class="max-w-3xl mx-auto px-3.5 pt-3 pb-2.5">
+            <!-- Ligne Titre, Badge Statut & Actions rapides -->
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 truncate leading-tight">Suivi Prod & Primes</h1>
+                            <span id="header-status-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-200/80">
+                                Oh nooooon !!!!!
+                            </span>
+                        </div>
+                        <p id="header-subtitle" class="text-[11px] font-medium text-slate-500 truncate">Poste Après-Midi • 13:15 - 20:45</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onclick="loadDemoData()" class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200/80 text-xs font-bold transition flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <span>Exemple</span>
+                    </button>
+                    <button type="button" onclick="openResetModal()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 border border-slate-200 text-xs font-bold transition flex items-center gap-1" title="Réinitialiser la journée">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span class="hidden sm:inline">Réinitialiser</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BARRE KPI PERMANENTE (Total Brut, Total Majoré, Temps Net, Colis / h, Prime €) -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2">
+                <!-- 1. Total Brut -->
+                <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-2 text-center">
+                    <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Brut</div>
+                    <div id="kpi-colis-brut" class="text-sm sm:text-base font-black text-slate-800 mt-0.5 tabular-nums">0</div>
+                    <div class="text-[9px] font-semibold text-slate-400">Colis saisis</div>
+                </div>
+                <!-- 2. Total Majoré -->
+                <div class="bg-violet-50/75 border border-violet-200/80 rounded-xl p-2 text-center">
+                    <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-violet-700">Total Majoré</div>
+                    <div id="kpi-colis-majore" class="text-sm sm:text-base font-black text-violet-950 mt-0.5 tabular-nums">0</div>
+                    <div class="text-[9px] font-semibold text-violet-500">Avec majorations</div>
+                </div>
+                <!-- 3. Temps Net -->
+                <div class="bg-blue-50/75 border border-blue-200/80 rounded-xl p-2 text-center">
+                    <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-600">Temps Net</div>
+                    <div id="kpi-temps" class="text-sm sm:text-base font-black text-blue-900 mt-0.5 tabular-nums">0,00 h</div>
+                    <div class="text-[9px] font-semibold text-blue-400">Heures décimales</div>
+                </div>
+                <!-- 4. Colis / h -->
+                <div class="bg-indigo-50/75 border border-indigo-200/80 rounded-xl p-2 text-center">
+                    <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">Colis / h</div>
+                    <div id="kpi-cadence" class="text-sm sm:text-base font-black text-indigo-900 mt-0.5 tabular-nums">0,00</div>
+                    <div class="text-[9px] font-semibold text-indigo-400">Majoré / Temps Net</div>
+                </div>
+                <!-- 5. Prime € -->
+                <div id="kpi-prime-box" class="col-span-2 sm:col-span-1 bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-2 text-center transition-colors">
+                    <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-700">Prime</div>
+                    <div id="kpi-prime" class="text-sm sm:text-base font-black text-emerald-700 mt-0.5 tabular-nums">0,00 €</div>
+                    <div id="kpi-prime-sub" class="text-[9px] font-semibold text-emerald-600/80">Barème</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEUR PRINCIPAL -->
+    <main class="max-w-3xl mx-auto px-3.5 pt-4 space-y-4">
+
+        <!-- NAVIGATION PAR ONGLETS PRINCIPAUX (3 ONGLETS) -->
+        <nav class="grid grid-cols-3 gap-1.5 bg-slate-200/80 p-1.5 rounded-2xl border border-slate-200">
+            <button type="button" id="tab-btn-day" onclick="switchMainTab('day')" class="py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm bg-white text-indigo-600 shadow-sm transition flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <span class="truncate">Production du jour</span>
+            </button>
+            <button type="button" id="tab-btn-week" onclick="switchMainTab('week')" class="py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span class="truncate">Calcule Semaine</span>
+                <span id="week-badge-count" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-indigo-100 text-indigo-700 font-extrabold">0</span>
+            </button>
+            <button type="button" id="tab-btn-bareme" onclick="switchMainTab('bareme')" class="py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <span class="truncate">Barème</span>
+            </button>
+        </nav>
+
+        <!-- =================================================================== -->
+        <!-- VUE 1 : PRODUCTION DU JOUR                                          -->
+        <!-- =================================================================== -->
+        <div id="view-day" class="space-y-4">
+
+            <!-- CARTE 1 : INFORMATIONS DE POSTE -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 font-extrabold text-xs flex items-center justify-center">1</span>
+                        <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Informations de poste</h2>
+                    </div>
+                    <span id="detected-weekday" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold capitalize">
+                        Samedi
+                    </span>
+                </div>
+
+                <!-- Date -->
+                <div>
+                    <label for="input-date" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Date de travail</label>
+                    <input type="date" id="input-date" onchange="handleDateChange()" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition">
+                </div>
+
+                <!-- Sélecteur de Poste -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Poste</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" data-shift="Matin" onclick="selectShift('Matin')" class="shift-btn p-2.5 rounded-2xl border-2 text-center transition active:scale-95">
+                            <div class="text-xs font-extrabold">Matin</div>
+                            <div class="text-[11px] font-medium opacity-80 mt-0.5">05:15 - 12:45</div>
+                        </button>
+                        <button type="button" data-shift="Après-Midi" onclick="selectShift('Après-Midi')" class="shift-btn p-2.5 rounded-2xl border-2 text-center transition active:scale-95">
+                            <div class="text-xs font-extrabold">Après-Midi</div>
+                            <div class="text-[11px] font-medium opacity-80 mt-0.5">13:15 - 20:45</div>
+                        </button>
+                        <button type="button" data-shift="Samedi" onclick="selectShift('Samedi')" class="shift-btn p-2.5 rounded-2xl border-2 text-center transition active:scale-95">
+                            <div class="text-xs font-extrabold">Samedi</div>
+                            <div class="text-[11px] font-medium opacity-80 mt-0.5">07:30 - 15:00</div>
+                        </button>
+                        <button type="button" data-shift="Personnalisé" onclick="selectShift('Personnalisé')" class="shift-btn p-2.5 rounded-2xl border-2 text-center transition active:scale-95">
+                            <div class="text-xs font-extrabold">Personnalisé</div>
+                            <div class="text-[11px] font-medium opacity-80 mt-0.5">Horaires libres</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Heures Début / Fin / Heure Sup -->
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div>
+                        <label for="input-start" class="block text-[11px] font-bold text-slate-500 mb-1">Heure début</label>
+                        <input type="time" id="input-start" value="13:15" onchange="handleManualTimeChange()" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-2.5 text-sm font-extrabold text-center text-slate-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                    <div>
+                        <label for="input-end" class="block text-[11px] font-bold text-slate-500 mb-1">Heure fin</label>
+                        <input type="time" id="input-end" value="20:45" onchange="handleManualTimeChange()" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-2.5 text-sm font-extrabold text-center text-slate-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">Heure sup.</label>
+                        <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 h-[42px]">
+                            <button type="button" id="btn-ot-yes" onclick="setOvertime(true)" class="rounded-xl text-xs font-extrabold transition">OUI</button>
+                            <button type="button" id="btn-ot-no" onclick="setOvertime(false)" class="rounded-xl text-xs font-extrabold transition">NON</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Temps travaillé brut -->
+                <div class="bg-slate-50 rounded-2xl px-3.5 py-2.5 border border-slate-200/80 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-600">Temps travaillé brut</span>
+                    <span id="gross-time-label" class="text-sm font-black text-slate-900 tabular-nums">07:30 (7,50 h)</span>
+                </div>
+            </section>
+
+            <!-- CARTE 2 : SAISIE DES COLIS PAR RAYON -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-blue-100 text-blue-700 font-extrabold text-xs flex items-center justify-center">2</span>
+                        <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Saisie des Colis par Rayon</h2>
+                    </div>
+                    <span id="card-total-colis" class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-xs font-black tabular-nums">
+                        Majoré : 0 • Brut : 0
+                    </span>
+                </div>
+
+                <!-- Sous-onglets colorés par rayon avec colis bruts, coefficient et colis majorés -->
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" id="rayon-tab-Brasserie" onclick="selectRayon('Brasserie')" class="p-3 rounded-2xl border-2 text-left transition active:scale-95">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-xs font-extrabold truncate">Brasserie</span>
+                            <span class="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black shrink-0">×1,20</span>
+                        </div>
+                        <div id="sub-Brasserie" class="text-base sm:text-lg font-black mt-1 tabular-nums">0</div>
+                        <div id="raw-Brasserie" class="text-[10px] font-semibold opacity-75 tabular-nums">Brut : 0</div>
+                    </button>
+
+                    <button type="button" id="rayon-tab-Epicerie" onclick="selectRayon('Epicerie')" class="p-3 rounded-2xl border-2 text-left transition active:scale-95">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-xs font-extrabold truncate">Épicerie</span>
+                            <span class="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-black shrink-0">×1,33</span>
+                        </div>
+                        <div id="sub-Epicerie" class="text-base sm:text-lg font-black mt-1 tabular-nums">0</div>
+                        <div id="raw-Epicerie" class="text-[10px] font-semibold opacity-75 tabular-nums">Brut : 0</div>
+                    </button>
+
+                    <button type="button" id="rayon-tab-Proxi" onclick="selectRayon('Proxi')" class="p-3 rounded-2xl border-2 text-left transition active:scale-95">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-xs font-extrabold truncate">Proxi</span>
+                            <span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0">×1,80</span>
+                        </div>
+                        <div id="sub-Proxi" class="text-base sm:text-lg font-black mt-1 tabular-nums">0</div>
+                        <div id="raw-Proxi" class="text-[10px] font-semibold opacity-75 tabular-nums">Brut : 0</div>
+                    </button>
+                </div>
+
+                <!-- Bandeau de détail du rayon actif (Colis bruts • Coefficient • Colis majorés) -->
+                <div id="rayon-maj-summary" class="px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span class="font-semibold text-slate-600">
+                        Colis bruts : <strong id="active-raw-colis" class="text-slate-900 font-black tabular-nums">0</strong>
+                    </span>
+                    <span id="active-coef-badge" class="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 font-black tabular-nums">
+                        Coeff. ×1,33 (+33%)
+                    </span>
+                    <span class="font-semibold text-slate-600">
+                        Majorés : <strong id="active-maj-colis" class="text-indigo-700 font-black tabular-nums">0</strong>
+                    </span>
+                </div>
+
+                <!-- Zone d'ajout rapide de lot -->
+                <div id="rayon-input-box" class="p-3.5 rounded-2xl border transition-colors space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span id="active-rayon-title" class="text-xs font-extrabold uppercase tracking-wider">Ajouter un lot brut • Épicerie</span>
+                        <span class="text-[11px] font-medium opacity-75">Entier ou décimal (ex: 110.55)</span>
+                    </div>
+                    <form onsubmit="handleAddColis(event)" class="flex gap-2">
+                        <input type="text" inputmode="decimal" id="colis-input" placeholder="Colis bruts..." class="flex-1 min-w-0 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base font-extrabold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        <button type="submit" id="add-colis-btn" class="px-4 py-2.5 rounded-xl font-extrabold text-sm text-white shadow-sm active:scale-95 transition flex items-center gap-1.5 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span>Ajouter</span>
+                        </button>
+                    </form>
+
+                    <!-- Liste des lots saisis pour le rayon sélectionné -->
+                    <div id="colis-list-container" class="pt-1">
+                        <!-- Injecté dynamiquement -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- CARTE 3 : TEMPS DÉDUITS & ARRÊTS -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 font-extrabold text-xs flex items-center justify-center">3</span>
+                        <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Temps déduits & Arrêts</h2>
+                    </div>
+                    <span id="total-deducted-badge" class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-xs font-black tabular-nums">
+                        -0,67 h
+                    </span>
+                </div>
+
+                <!-- 3 Interrupteurs segmentés OUI / NON -->
+                <div class="space-y-2.5">
+                    <!-- Pause -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">Pause</div>
+                            <div class="text-xs font-medium text-slate-500">30 min (-0,50 h)</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 bg-slate-200/80 p-1 rounded-xl w-28">
+                            <button type="button" id="ded-pause-yes" onclick="setToggleDeduction('pause', true)" class="py-1.5 rounded-lg text-xs font-extrabold transition">OUI</button>
+                            <button type="button" id="ded-pause-no" onclick="setToggleDeduction('pause', false)" class="py-1.5 rounded-lg text-xs font-extrabold transition">NON</button>
+                        </div>
+                    </div>
+
+                    <!-- Réveil musculaire -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">Réveil musculaire</div>
+                            <div class="text-xs font-medium text-slate-500">10 min (-0,17 h)</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 bg-slate-200/80 p-1 rounded-xl w-28">
+                            <button type="button" id="ded-wakeup-yes" onclick="setToggleDeduction('wakeup', true)" class="py-1.5 rounded-lg text-xs font-extrabold transition">OUI</button>
+                            <button type="button" id="ded-wakeup-no" onclick="setToggleDeduction('wakeup', false)" class="py-1.5 rounded-lg text-xs font-extrabold transition">NON</button>
+                        </div>
+                    </div>
+
+                    <!-- Batterie -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">Batterie</div>
+                            <div class="text-xs font-medium text-slate-500">15 min (-0,25 h)</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 bg-slate-200/80 p-1 rounded-xl w-28">
+                            <button type="button" id="ded-battery-yes" onclick="setToggleDeduction('battery', true)" class="py-1.5 rounded-lg text-xs font-extrabold transition">OUI</button>
+                            <button type="button" id="ded-battery-no" onclick="setToggleDeduction('battery', false)" class="py-1.5 rounded-lg text-xs font-extrabold transition">NON</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Champs HH:MM pour Farine & Temps signé -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <!-- Farine -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Farine (HH:MM)</span>
+                            <span id="farine-dec-label" class="text-xs font-black text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-lg tabular-nums">-0,00 h</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <input type="number" id="farine-h" min="0" max="12" value="0" oninput="recalculateAll()" class="w-16 rounded-xl border border-slate-300 bg-white py-2 text-center text-base font-black text-slate-900 focus:border-indigo-500 outline-none">
+                            <span class="font-black text-slate-400">:</span>
+                            <input type="number" id="farine-m" min="0" max="59" value="0" oninput="recalculateAll()" class="w-16 rounded-xl border border-slate-300 bg-white py-2 text-center text-base font-black text-slate-900 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div class="flex flex-wrap justify-center gap-1">
+                            <button type="button" onclick="adjustHHMM('farine', 5)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+5m</button>
+                            <button type="button" onclick="adjustHHMM('farine', 10)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+10m</button>
+                            <button type="button" onclick="adjustHHMM('farine', 15)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+15m</button>
+                            <button type="button" onclick="adjustHHMM('farine', 30)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+30m</button>
+                            <button type="button" onclick="resetHHMM('farine')" class="px-2 py-1 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-[11px] font-bold text-slate-600 active:scale-95">00:00</button>
+                        </div>
+                    </div>
+
+                    <!-- Temps signé -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Temps signé (HH:MM)</span>
+                            <span id="signed-dec-label" class="text-xs font-black text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-lg tabular-nums">-0,00 h</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <input type="number" id="signed-h" min="0" max="12" value="0" oninput="recalculateAll()" class="w-16 rounded-xl border border-slate-300 bg-white py-2 text-center text-base font-black text-slate-900 focus:border-indigo-500 outline-none">
+                            <span class="font-black text-slate-400">:</span>
+                            <input type="number" id="signed-m" min="0" max="59" value="0" oninput="recalculateAll()" class="w-16 rounded-xl border border-slate-300 bg-white py-2 text-center text-base font-black text-slate-900 focus:border-indigo-500 outline-none">
+                        </div>
+                        <div class="flex flex-wrap justify-center gap-1">
+                            <button type="button" onclick="adjustHHMM('signed', 5)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+5m</button>
+                            <button type="button" onclick="adjustHHMM('signed', 10)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+10m</button>
+                            <button type="button" onclick="adjustHHMM('signed', 15)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+15m</button>
+                            <button type="button" onclick="adjustHHMM('signed', 30)" class="px-2 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 text-[11px] font-bold text-slate-700 active:scale-95">+30m</button>
+                            <button type="button" onclick="resetHHMM('signed')" class="px-2 py-1 rounded-lg bg-slate-200/70 hover:bg-slate-300 text-[11px] font-bold text-slate-600 active:scale-95">00:00</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Encadré d'information -->
+                <div class="p-3 rounded-2xl bg-blue-50/90 border border-blue-200/80 flex items-start gap-2.5 text-blue-900">
+                    <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-xs font-semibold leading-relaxed">
+                        À la pause de 30 minutes mettre 3:15 de temps signé + le temps d'attente actuel
+                    </p>
+                </div>
+            </section>
+
+            <!-- CARTE 4 : RÉCAPITULATIF DE LA JOURNÉE -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 font-extrabold text-xs flex items-center justify-center">4</span>
+                        <h2 class="text-sm sm:text-base font-extrabold text-slate-900">Récapitulatif de la journée</h2>
+                    </div>
+                    <button type="button" onclick="switchMainTab('bareme')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition">
+                        Voir le barème →
+                    </button>
+                </div>
+
+                <!-- Bannière de statut & progression -->
+                <div id="status-card" class="p-4 rounded-2xl border-2 transition-all duration-300">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div id="status-headline" class="text-xl sm:text-2xl font-black tracking-tight">Oh nooooon !!!!!</div>
+                            <p id="status-subline" class="text-xs sm:text-sm font-semibold mt-0.5 opacity-90">
+                                Atteignez 180 colis/h majorés pour débloquer la première prime.
+                            </p>
+                        </div>
+                        <div id="status-badge" class="px-3 py-1.5 rounded-2xl text-sm sm:text-base font-black shrink-0 tabular-nums">
+                            0,00 €
+                        </div>
+                    </div>
+
+                    <!-- Barre de progression vers le palier suivant -->
+                    <div class="mt-3.5 space-y-1.5">
+                        <div class="flex items-center justify-between text-[11px] font-bold">
+                            <span id="prog-left">0,00 colis/h</span>
+                            <span id="prog-right">Objectif : 180 colis/h (5 €)</span>
+                        </div>
+                        <div class="w-full h-2.5 rounded-full bg-black/10 overflow-hidden">
+                            <div id="prog-bar" class="h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Détails chiffrés du calcul -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
+                        <div class="text-[11px] font-bold text-slate-500">Total Brut</div>
+                        <div id="recap-raw-colis" class="text-sm sm:text-base font-black text-slate-800 mt-0.5 tabular-nums">0</div>
+                        <div class="text-[10px] font-medium text-slate-400">Avant majoration</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-violet-50/70 border border-violet-200/80 text-center">
+                        <div class="text-[11px] font-bold text-violet-700">Total Majoré</div>
+                        <div id="recap-maj-colis" class="text-sm sm:text-base font-black text-violet-950 mt-0.5 tabular-nums">0</div>
+                        <div class="text-[10px] font-medium text-violet-500">Base cadence</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-center">
+                        <div class="text-[11px] font-bold text-blue-700">Temps Net</div>
+                        <div id="recap-net-hours" class="text-sm sm:text-base font-black text-blue-950 mt-0.5 tabular-nums">0,00 h</div>
+                        <div class="text-[10px] font-medium text-blue-500">Déductions incluses</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-center">
+                        <div class="text-[11px] font-bold text-indigo-600">Colis/h Majorés</div>
+                        <div id="recap-cadence" class="text-sm sm:text-base font-black text-indigo-900 mt-0.5 tabular-nums">0,00</div>
+                        <div class="text-[10px] font-medium text-indigo-500">Majoré / Temps Net</div>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-center">
+                        <div class="text-[11px] font-bold text-emerald-700">Prime Barème</div>
+                        <div id="recap-prime" class="text-sm sm:text-base font-black text-emerald-700 mt-0.5 tabular-nums">0,00 €</div>
+                        <div id="recap-tier" class="text-[10px] font-medium text-emerald-600">&lt; 180 c/h</div>
+                    </div>
+                </div>
+
+                <!-- Enregistrer dans la semaine -->
+                <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div class="flex gap-2 flex-1">
+                        <select id="save-week-select" class="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-extrabold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none">
+                            <option value="1">Semaine 1</option>
+                            <option value="2">Semaine 2</option>
+                            <option value="3">Semaine 3</option>
+                            <option value="4">Semaine 4</option>
+                            <option value="5">Semaine 5</option>
+                        </select>
+                        <select id="save-day-select" class="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-extrabold text-slate-800 focus:bg-white focus:border-indigo-500 outline-none">
+                            <option value="Lundi">Lundi</option>
+                            <option value="Mardi">Mardi</option>
+                            <option value="Mercredi">Mercredi</option>
+                            <option value="Jeudi">Jeudi</option>
+                            <option value="Vendredi">Vendredi</option>
+                            <option value="Samedi" selected>Samedi</option>
+                            <option value="Dimanche">Dimanche</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="saveDayToWeek()" class="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-1.5 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        <span>Enregistrer dans la semaine</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VUE 2 : CALCULE SEMAINE                                             -->
+        <!-- =================================================================== -->
+        <div id="view-week" class="hidden space-y-4">
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-base font-extrabold text-slate-900">Suivi Hebdomadaire</h2>
+                        <p class="text-xs text-slate-500">Sauvegarde automatique dans le navigateur • Export CSV</p>
+                    </div>
+                    <button type="button" onclick="exportCSV()" class="px-3.5 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold shadow-sm transition flex items-center gap-1.5 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+
+                <!-- Sélecteur Semaine 1 à 5 -->
+                <div class="grid grid-cols-5 gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80">
+                    <button type="button" data-wfilter="1" onclick="selectWeekFilter(1)" class="wfilter-btn py-2 rounded-xl text-xs font-extrabold transition">S1</button>
+                    <button type="button" data-wfilter="2" onclick="selectWeekFilter(2)" class="wfilter-btn py-2 rounded-xl text-xs font-extrabold transition">S2</button>
+                    <button type="button" data-wfilter="3" onclick="selectWeekFilter(3)" class="wfilter-btn py-2 rounded-xl text-xs font-extrabold transition">S3</button>
+                    <button type="button" data-wfilter="4" onclick="selectWeekFilter(4)" class="wfilter-btn py-2 rounded-xl text-xs font-extrabold transition">S4</button>
+                    <button type="button" data-wfilter="5" onclick="selectWeekFilter(5)" class="wfilter-btn py-2 rounded-xl text-xs font-extrabold transition">S5</button>
+                </div>
+
+                <!-- Totaux de la semaine sélectionnée -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
+                        <div class="text-[10px] font-bold uppercase text-slate-500">Total Majoré</div>
+                        <div id="week-sum-colis" class="text-base font-black text-slate-900 mt-0.5 tabular-nums">0</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-center">
+                        <div class="text-[10px] font-bold uppercase text-blue-600">Temps Net</div>
+                        <div id="week-sum-hours" class="text-base font-black text-blue-900 mt-0.5 tabular-nums">0,00 h</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 text-center">
+                        <div class="text-[10px] font-bold uppercase text-indigo-600">Cadence Moy.</div>
+                        <div id="week-avg-cadence" class="text-base font-black text-indigo-900 mt-0.5 tabular-nums">0,00</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-center">
+                        <div class="text-[10px] font-bold uppercase text-emerald-700">Primes Semaine</div>
+                        <div id="week-sum-prime" class="text-base font-black text-emerald-700 mt-0.5 tabular-nums">0,00 €</div>
+                    </div>
+                </div>
+
+                <!-- Liste des 7 jours de la semaine (Lundi à Dimanche) -->
+                <div id="week-days-list" class="space-y-2">
+                    <!-- Injecté dynamiquement -->
+                </div>
+            </section>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VUE 3 : BARÈME                                                      -->
+        <!-- =================================================================== -->
+        <div id="view-bareme" class="hidden space-y-4">
+            <!-- Coefficients de majoration par rayon -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-3">
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900">Majorations par Rayon</h2>
+                    <p class="text-xs text-slate-500">Chaque rayon applique son coefficient sur les colis bruts saisis</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                        <span class="text-xs font-extrabold text-amber-950">Brasserie</span>
+                        <span class="text-base font-black text-amber-700 tabular-nums">× 1,20 (+20%)</span>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200/90 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                        <span class="text-xs font-extrabold text-indigo-950">Épicerie</span>
+                        <span class="text-base font-black text-indigo-700 tabular-nums">× 1,33 (+33%)</span>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-center justify-between sm:flex-col sm:items-start gap-1">
+                        <span class="text-xs font-extrabold text-emerald-950">Proxi</span>
+                        <span class="text-base font-black text-emerald-700 tabular-nums">× 1,80 (+80%)</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Barème Cadence Majorée -> Prime en € -->
+            <section class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-3">
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900">Barème Cadence Majorée → Prime (€)</h2>
+                    <p class="text-xs text-slate-500">Votre palier actuel est mis en évidence selon votre cadence majorée (Colis Majorés / Temps Net)</p>
+                </div>
+
+                <div id="bareme-table" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    <!-- Injecté dynamiquement -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Mention discrète centrée en bas de page -->
+        <footer class="pt-2 pb-1 text-center">
+            <p class="text-[11px] font-medium text-slate-400">Fait par : FiiFii</p>
+        </footer>
+
+    </main>
+
+    <!-- MODALE DE CONFIRMATION PERSONNALISÉE -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-xl border border-slate-200 space-y-4 animate-pop">
+            <div class="space-y-1">
+                <h3 id="modal-title" class="text-base font-extrabold text-slate-900">Réinitialiser la journée ?</h3>
+                <p id="modal-desc" class="text-xs text-slate-500 leading-relaxed">Tous les colis saisis et les temps déduits de la journée en cours seront remis à zéro.</p>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition">
+                    Annuler
+                </button>
+                <button type="button" id="modal-confirm-btn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold transition">
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-lg">
+        <span id="toast-msg">Enregistré</span>
+    </div>
+
+    <script>
+        /**
+         * =========================================================================
+         * CONFIGURATION & DONNÉES DE RÉFÉRENCE (FICHIER GOOGLE SHEET PROD)
+         * =========================================================================
+         */
+        const SHIFT_PRESETS = {
+            'Matin': { start: '05:15', end: '12:45', label: 'Poste Matin • 05:15 - 12:45' },
+            'Après-Midi': { start: '13:15', end: '20:45', label: 'Poste Après-Midi • 13:15 - 20:45' },
+            'Samedi': { start: '07:30', end: '15:00', label: 'Poste Samedi • 07:30 - 15:00' },
+            'Personnalisé': { start: null, end: null, label: 'Poste Personnalisé' }
+        };
+
+        const RAYON_CONFIG = {
+            Brasserie: {
+                name: 'Brasserie',
+                coef: 1.20,
+                coefLabel: '×1,20',
+                bonusLabel: '+20%',
+                activeTab: 'bg-amber-50 border-amber-400 text-amber-950 shadow-xs',
+                inactiveTab: 'bg-white border-slate-200/90 text-slate-700 hover:border-amber-200',
+                box: 'bg-amber-50/50 border-amber-200/80 text-amber-950',
+                btn: 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/20',
+                badge: 'bg-amber-100 text-amber-800'
+            },
+            Epicerie: {
+                name: 'Épicerie',
+                coef: 1.33,
+                coefLabel: '×1,33',
+                bonusLabel: '+33%',
+                activeTab: 'bg-indigo-50 border-indigo-400 text-indigo-950 shadow-xs',
+                inactiveTab: 'bg-white border-slate-200/90 text-slate-700 hover:border-indigo-200',
+                box: 'bg-indigo-50/50 border-indigo-200/80 text-indigo-950',
+                btn: 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20',
+                badge: 'bg-indigo-100 text-indigo-800'
+            },
+            Proxi: {
+                name: 'Proxi',
+                coef: 1.80,
+                coefLabel: '×1,80',
+                bonusLabel: '+80%',
+                activeTab: 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-xs',
+                inactiveTab: 'bg-white border-slate-200/90 text-slate-700 hover:border-emerald-200',
+                box: 'bg-emerald-50/50 border-emerald-200/80 text-emerald-950',
+                btn: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20',
+                badge: 'bg-emerald-100 text-emerald-800'
+            }
+        };
+
+        // Barème Cadence Majorée -> Prime (€)
+        const PRIME_TIERS = [
+            { min: 0, max: 179.9999, label: '< 180', prime: 0 },
+            { min: 180, max: 184.9999, label: '180 - 184', prime: 5 },
+            { min: 185, max: 189.9999, label: '185 - 189', prime: 6 },
+            { min: 190, max: 194.9999, label: '190 - 194', prime: 7 },
+            { min: 195, max: 199.9999, label: '195 - 199', prime: 8 },
+            { min: 200, max: 204.9999, label: '200 - 204', prime: 9 },
+            { min: 205, max: 209.9999, label: '205 - 209', prime: 10 },
+            { min: 210, max: 214.9999, label: '210 - 214', prime: 11 },
+            { min: 215, max: 219.9999, label: '215 - 219', prime: 12 },
+            { min: 220, max: 224.9999, label: '220 - 224', prime: 13 },
+            { min: 225, max: 229.9999, label: '225 - 229', prime: 14 },
+            { min: 230, max: 234.9999, label: '230 - 234', prime: 15 },
+            { min: 235, max: 239.9999, label: '235 - 239', prime: 16 },
+            { min: 240, max: 244.9999, label: '240 - 244', prime: 17 },
+            { min: 245, max: 248.9999, label: '245 - 248', prime: 18 },
+            { min: 249, max: 251.9999, label: '249 - 251', prime: 19 },
+            { min: 252, max: 254.9999, label: '252 - 254', prime: 20 },
+            { min: 255, max: 257.9999, label: '255 - 257', prime: 21 },
+            { min: 258, max: 260.9999, label: '258 - 260', prime: 22 },
+            { min: 261, max: 263.9999, label: '261 - 263', prime: 23 },
+            { min: 264, max: 265.9999, label: '264 - 265', prime: 24 },
+            { min: 266, max: 268.9999, label: '266 - 268', prime: 25 },
+            { min: 269, max: Infinity, label: '≥ 269', prime: 26 }
+        ];
+
+        const DAYS_ORDER = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const STORAGE_DRAFT_KEY = 'suivi_prod_primes_draft_v4';
+        const STORAGE_HISTORY_KEY = 'suivi_prod_primes_history_v4';
+
+        /**
+         * =========================================================================
+         * ÉTAT DE L'APPLICATION
+         * =========================================================================
+         */
+        let state = {
+            date: getTodayISO(),
+            shift: 'Après-Midi',
+            startTime: '13:15',
+            endTime: '20:45',
+            overtime: false,
+            activeRayon: 'Epicerie',
+            colis: {
+                Brasserie: [],
+                Epicerie: [],
+                Proxi: []
+            },
+            deductions: {
+                pause: true,     // 30 min = -0,50 h
+                wakeup: true,    // 10 min = -0,17 h
+                battery: false   // 15 min = -0,25 h
+            },
+            selectedWeekFilter: 1,
+            history: []
+        };
+
+        let modalCallback = null;
+
+        /**
+         * =========================================================================
+         * UTILITAIRES DE FORMATAGE & TEMPS
+         * =========================================================================
+         */
+        function getTodayISO() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getDayNameFromDate(dateStr) {
+            if (!dateStr) return 'Samedi';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return 'Samedi';
+            const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            const jsDay = d.getDay(); // 0 = Dimanche, 1 = Lundi ... 6 = Samedi
+            return jsDay === 0 ? 'Dimanche' : DAYS_ORDER[jsDay - 1];
+        }
+
+        function parseTimeToDecimal(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            const [h, m] = timeStr.split(':').map(Number);
+            if (isNaN(h) || isNaN(m)) return 0;
+            return h + (m / 60);
+        }
+
+        function decimalToHHMM(decHours) {
+            const totalMinutes = Math.max(0, Math.round(decHours * 60));
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function formatDecimal(num, decimals = 2) {
+            return num.toFixed(decimals).replace('.', ',');
+        }
+
+        function formatNumber(num) {
+            const isInt = Math.abs(num - Math.round(num)) < 0.0001;
+            if (isInt) {
+                return Math.round(num).toLocaleString('fr-FR');
+            }
+            return num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        /**
+         * =========================================================================
+         * NAVIGATION ENTRE ONGLETS PRINCIPAUX
+         * =========================================================================
+         */
+        function switchMainTab(tabName) {
+            const views = {
+                day: document.getElementById('view-day'),
+                week: document.getElementById('view-week'),
+                bareme: document.getElementById('view-bareme')
+            };
+            const buttons = {
+                day: document.getElementById('tab-btn-day'),
+                week: document.getElementById('tab-btn-week'),
+                bareme: document.getElementById('tab-btn-bareme')
+            };
+
+            Object.keys(views).forEach(key => {
+                if (key === tabName) {
+                    views[key].classList.remove('hidden');
+                    buttons[key].className = 'py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm bg-white text-indigo-600 shadow-sm transition flex items-center justify-center gap-1.5';
+                } else {
+                    views[key].classList.add('hidden');
+                    buttons[key].className = 'py-2.5 px-2 rounded-xl font-bold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5';
+                }
+            });
+
+            if (tabName === 'week') renderWeekView();
+            if (tabName === 'bareme') renderBaremeTable();
+        }
+
+        /**
+         * =========================================================================
+         * GESTION DE LA DATE, DU POSTE & DES HORAIRES
+         * =========================================================================
+         */
+        function handleDateChange() {
+            const val = document.getElementById('input-date').value;
+            if (!val) return;
+            state.date = val;
+            const dayName = getDayNameFromDate(val);
+            document.getElementById('detected-weekday').textContent = dayName;
+            document.getElementById('save-day-select').value = dayName;
+            recalculateAll();
+        }
+
+        function selectShift(shiftName) {
+            state.shift = shiftName;
+            const preset = SHIFT_PRESETS[shiftName];
+            if (preset && preset.start && preset.end) {
+                state.startTime = preset.start;
+                state.endTime = preset.end;
+                document.getElementById('input-start').value = preset.start;
+                document.getElementById('input-end').value = preset.end;
+            }
+            updateShiftUI();
+            recalculateAll();
+        }
+
+        function handleManualTimeChange() {
+            state.startTime = document.getElementById('input-start').value || '00:00';
+            state.endTime = document.getElementById('input-end').value || '00:00';
+
+            const matched = Object.entries(SHIFT_PRESETS).find(([key, p]) => p.start === state.startTime && p.end === state.endTime);
+            state.shift = matched ? matched[0] : 'Personnalisé';
+            updateShiftUI();
+            recalculateAll();
+        }
+
+        function setOvertime(isOt) {
+            state.overtime = isOt;
+            updateOvertimeUI();
+            recalculateAll();
+        }
+
+        function updateOvertimeUI() {
+            const btnYes = document.getElementById('btn-ot-yes');
+            const btnNo = document.getElementById('btn-ot-no');
+            if (state.overtime) {
+                btnYes.className = 'rounded-xl text-xs font-extrabold bg-indigo-600 text-white shadow-2xs transition';
+                btnNo.className = 'rounded-xl text-xs font-extrabold text-slate-500 hover:text-slate-800 transition';
+            } else {
+                btnYes.className = 'rounded-xl text-xs font-extrabold text-slate-500 hover:text-slate-800 transition';
+                btnNo.className = 'rounded-xl text-xs font-extrabold bg-white text-slate-800 shadow-2xs transition';
+            }
+        }
+
+        function updateShiftUI() {
+            document.querySelectorAll('.shift-btn').forEach(btn => {
+                const isSelected = btn.dataset.shift === state.shift;
+                btn.className = isSelected
+                    ? 'shift-btn p-2.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50/90 text-indigo-950 text-center shadow-2xs transition active:scale-95'
+                    : 'shift-btn p-2.5 rounded-2xl border-2 border-slate-200/90 bg-white text-slate-700 hover:border-slate-300 text-center transition active:scale-95';
+            });
+
+            const preset = SHIFT_PRESETS[state.shift];
+            const otText = state.overtime ? ' • Heure sup.' : '';
+            const baseLabel = (state.shift === 'Personnalisé' || !preset)
+                ? `Poste Personnalisé • ${state.startTime} - ${state.endTime}`
+                : preset.label;
+            document.getElementById('header-subtitle').textContent = baseLabel + otText;
+        }
+
+        /**
+         * =========================================================================
+         * SAISIE DES COLIS PAR RAYON & MAJORATIONS
+         * =========================================================================
+         */
+        function selectRayon(rayon) {
+            state.activeRayon = rayon;
+            updateRayonUI();
+            renderColisEntries();
+            recalculateAll();
+            document.getElementById('colis-input').focus();
+        }
+
+        function updateRayonUI() {
+            Object.keys(RAYON_CONFIG).forEach(r => {
+                const cfg = RAYON_CONFIG[r];
+                const tab = document.getElementById(`rayon-tab-${r}`);
+                tab.className = `p-3 rounded-2xl border-2 text-left transition active:scale-95 ${r === state.activeRayon ? cfg.activeTab : cfg.inactiveTab}`;
+            });
+
+            const activeCfg = RAYON_CONFIG[state.activeRayon];
+            document.getElementById('rayon-input-box').className = `p-3.5 rounded-2xl border transition-colors space-y-2.5 ${activeCfg.box}`;
+            document.getElementById('active-rayon-title').textContent = `Ajouter un lot brut • ${activeCfg.name}`;
+            document.getElementById('add-colis-btn').className = `px-4 py-2.5 rounded-xl font-extrabold text-sm text-white shadow-sm active:scale-95 transition flex items-center gap-1.5 shrink-0 ${activeCfg.btn}`;
+            document.getElementById('active-coef-badge').className = `px-2 py-0.5 rounded-lg font-black tabular-nums ${activeCfg.badge}`;
+        }
+
+        function handleAddColis(event) {
+            event.preventDefault();
+            const input = document.getElementById('colis-input');
+            const normalized = input.value.trim().replace(',', '.');
+            const val = parseFloat(normalized);
+
+            if (isNaN(val) || val <= 0) {
+                showToast('Veuillez saisir un nombre de colis valide (> 0)');
+                input.focus();
+                return;
+            }
+
+            const roundedVal = Math.round(val * 100) / 100;
+            state.colis[state.activeRayon].push(roundedVal);
+            input.value = '';
+            input.focus();
+
+            renderColisEntries();
+            recalculateAll();
+        }
+
+        function removeColisEntry(rayon, index) {
+            state.colis[rayon].splice(index, 1);
+            renderColisEntries();
+            recalculateAll();
+        }
+
+        function renderColisEntries() {
+            const container = document.getElementById('colis-list-container');
+            const entries = state.colis[state.activeRayon] || [];
+            const coef = RAYON_CONFIG[state.activeRayon].coef;
+
+            if (entries.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 italic py-1">Aucun lot brut saisi pour ce rayon.</div>`;
+                return;
+            }
+
+            const pillStyles = {
+                Brasserie: 'bg-white border-amber-200 text-amber-950',
+                Epicerie: 'bg-white border-indigo-200 text-indigo-950',
+                Proxi: 'bg-white border-emerald-200 text-emerald-950'
+            };
+
+            container.innerHTML = `
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    ${entries.map((val, idx) => {
+                        const majLot = Math.round(val * coef * 100) / 100;
+                        return `
+                            <span class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl border text-xs font-extrabold shadow-2xs animate-pop ${pillStyles[state.activeRayon]}">
+                                <span>${formatNumber(val)} <span class="opacity-70 font-semibold">(→ ${formatNumber(majLot)})</span></span>
+                                <button type="button" onclick="removeColisEntry('${state.activeRayon}', ${idx})" class="w-5 h-5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition" title="Supprimer ce lot">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * =========================================================================
+         * TEMPS DÉDUITS & ARRÊTS
+         * =========================================================================
+         */
+        function setToggleDeduction(key, value) {
+            state.deductions[key] = value;
+            updateDeductionsUI();
+            recalculateAll();
+        }
+
+        function updateDeductionsUI() {
+            ['pause', 'wakeup', 'battery'].forEach(key => {
+                const isYes = state.deductions[key];
+                const btnYes = document.getElementById(`ded-${key}-yes`);
+                const btnNo = document.getElementById(`ded-${key}-no`);
+
+                if (isYes) {
+                    btnYes.className = 'py-1.5 rounded-lg text-xs font-extrabold bg-amber-500 text-white shadow-2xs transition';
+                    btnNo.className = 'py-1.5 rounded-lg text-xs font-extrabold text-slate-500 hover:text-slate-800 transition';
+                } else {
+                    btnYes.className = 'py-1.5 rounded-lg text-xs font-extrabold text-slate-500 hover:text-slate-800 transition';
+                    btnNo.className = 'py-1.5 rounded-lg text-xs font-extrabold bg-white text-slate-800 shadow-2xs transition';
+                }
+            });
+        }
+
+        function adjustHHMM(field, deltaMinutes) {
+            const hInput = document.getElementById(`${field}-h`);
+            const mInput = document.getElementById(`${field}-m`);
+            let totalMins = (parseInt(hInput.value, 10) || 0) * 60 + (parseInt(mInput.value, 10) || 0) + deltaMinutes;
+            totalMins = Math.max(0, totalMins);
+            hInput.value = Math.floor(totalMins / 60);
+            mInput.value = totalMins % 60;
+            recalculateAll();
+        }
+
+        function resetHHMM(field) {
+            document.getElementById(`${field}-h`).value = 0;
+            document.getElementById(`${field}-m`).value = 0;
+            recalculateAll();
+        }
+
+        function getHHMMDecimal(field) {
+            const h = Math.max(0, parseInt(document.getElementById(`${field}-h`).value, 10) || 0);
+            const m = Math.max(0, parseInt(document.getElementById(`${field}-m`).value, 10) || 0);
+            return h + (m / 60);
+        }
+
+        /**
+         * =========================================================================
+         * MOTEUR DE CALCUL PRINCIPAL (TOTAL MAJORÉ / TEMPS NET)
+         * =========================================================================
+         */
+        function computeMetrics() {
+            const rawBrasserie = state.colis.Brasserie.reduce((acc, v) => acc + v, 0);
+            const rawEpicerie = state.colis.Epicerie.reduce((acc, v) => acc + v, 0);
+            const rawProxi = state.colis.Proxi.reduce((acc, v) => acc + v, 0);
+            const totalRawColis = Math.round((rawBrasserie + rawEpicerie + rawProxi) * 100) / 100;
+
+            const subBrasserie = Math.round(rawBrasserie * RAYON_CONFIG.Brasserie.coef * 100) / 100;
+            const subEpicerie = Math.round(rawEpicerie * RAYON_CONFIG.Epicerie.coef * 100) / 100;
+            const subProxi = Math.round(rawProxi * RAYON_CONFIG.Proxi.coef * 100) / 100;
+            const totalMajoreColis = Math.round((subBrasserie + subEpicerie + subProxi) * 100) / 100;
+
+            let startDec = parseTimeToDecimal(state.startTime);
+            let endDec = parseTimeToDecimal(state.endTime);
+            if (endDec < startDec) endDec += 24;
+            const grossHours = Math.max(0, endDec - startDec);
+
+            const pauseHours = state.deductions.pause ? 0.50 : 0;
+            const wakeupHours = state.deductions.wakeup ? 0.17 : 0;
+            const batteryHours = state.deductions.battery ? 0.25 : 0;
+            const farineHours = getHHMMDecimal('farine');
+            const signedHours = getHHMMDecimal('signed');
+
+            const totalDeductions = pauseHours + wakeupHours + batteryHours + farineHours + signedHours;
+            const netProdHours = Math.max(0, grossHours - totalDeductions);
+
+            // Cadence calculée sur Total Majoré / Temps Net
+            const cadence = netProdHours > 0 ? (totalMajoreColis / netProdHours) : 0;
+
+            let currentTierIndex = 0;
+            for (let i = 0; i < PRIME_TIERS.length; i++) {
+                if (cadence >= PRIME_TIERS[i].min && cadence <= PRIME_TIERS[i].max) {
+                    currentTierIndex = i;
+                    break;
+                }
+            }
+
+            const currentTier = PRIME_TIERS[currentTierIndex];
+            const nextTier = currentTierIndex < PRIME_TIERS.length - 1 ? PRIME_TIERS[currentTierIndex + 1] : null;
+            const prime = currentTier.prime;
+
+            return {
+                rawBrasserie,
+                rawEpicerie,
+                rawProxi,
+                totalRawColis,
+                subBrasserie,
+                subEpicerie,
+                subProxi,
+                totalMajoreColis,
+                grossHours,
+                farineHours,
+                signedHours,
+                totalDeductions,
+                netProdHours,
+                cadence,
+                prime,
+                currentTier,
+                nextTier,
+                currentTierIndex
+            };
+        }
+
+        function recalculateAll() {
+            const m = computeMetrics();
+
+            // Sous-totaux majorés, colis bruts & Total majoré
+            document.getElementById('sub-Brasserie').textContent = formatNumber(m.subBrasserie);
+            document.getElementById('sub-Epicerie').textContent = formatNumber(m.subEpicerie);
+            document.getElementById('sub-Proxi').textContent = formatNumber(m.subProxi);
+
+            document.getElementById('raw-Brasserie').textContent = `Brut : ${formatNumber(m.rawBrasserie)}`;
+            document.getElementById('raw-Epicerie').textContent = `Brut : ${formatNumber(m.rawEpicerie)}`;
+            document.getElementById('raw-Proxi').textContent = `Brut : ${formatNumber(m.rawProxi)}`;
+
+            document.getElementById('card-total-colis').textContent = `Majoré : ${formatNumber(m.totalMajoreColis)} • Brut : ${formatNumber(m.totalRawColis)}`;
+
+            // Détail du rayon actif
+            const activeCfg = RAYON_CONFIG[state.activeRayon];
+            const rawMap = { Brasserie: m.rawBrasserie, Epicerie: m.rawEpicerie, Proxi: m.rawProxi };
+            const majMap = { Brasserie: m.subBrasserie, Epicerie: m.subEpicerie, Proxi: m.subProxi };
+            document.getElementById('active-raw-colis').textContent = formatNumber(rawMap[state.activeRayon]);
+            document.getElementById('active-coef-badge').textContent = `Coeff. ${activeCfg.coefLabel} (${activeCfg.bonusLabel})`;
+            document.getElementById('active-maj-colis').textContent = formatNumber(majMap[state.activeRayon]);
+
+            // Temps brut & déductions
+            document.getElementById('gross-time-label').textContent = `${decimalToHHMM(m.grossHours)} (${formatDecimal(m.grossHours)} h)`;
+            document.getElementById('farine-dec-label').textContent = `-${formatDecimal(m.farineHours)} h`;
+            document.getElementById('signed-dec-label').textContent = `-${formatDecimal(m.signedHours)} h`;
+            document.getElementById('total-deducted-badge').textContent = `-${formatDecimal(m.totalDeductions)} h`;
+
+            // Barre KPI Permanente en haut
+            document.getElementById('kpi-colis-brut').textContent = formatNumber(m.totalRawColis);
+            document.getElementById('kpi-colis-majore').textContent = formatNumber(m.totalMajoreColis);
+            document.getElementById('kpi-temps').textContent = `${formatDecimal(m.netProdHours)} h`;
+            document.getElementById('kpi-cadence').textContent = formatDecimal(m.cadence);
+            document.getElementById('kpi-prime').textContent = `${formatDecimal(m.prime)} €`;
+
+            const kpiPrimeBox = document.getElementById('kpi-prime-box');
+            if (m.prime > 0) {
+                kpiPrimeBox.className = 'col-span-2 sm:col-span-1 bg-emerald-50 border border-emerald-300 rounded-xl p-2 text-center transition-colors';
+            } else {
+                kpiPrimeBox.className = 'col-span-2 sm:col-span-1 bg-slate-50 border border-slate-200/90 rounded-xl p-2 text-center transition-colors';
+            }
+
+            // Récapitulatif de la journée
+            document.getElementById('recap-raw-colis').textContent = formatNumber(m.totalRawColis);
+            document.getElementById('recap-maj-colis').textContent = formatNumber(m.totalMajoreColis);
+            document.getElementById('recap-net-hours').textContent = `${formatDecimal(m.netProdHours)} h`;
+            document.getElementById('recap-cadence').textContent = formatDecimal(m.cadence);
+            document.getElementById('recap-prime').textContent = `${formatDecimal(m.prime)} €`;
+            document.getElementById('recap-tier').textContent = `${m.currentTier.label} c/h`;
+
+            // Bannière de statut, badge en-tête & barre de progression
+            updateStatusBanner(m);
+
+            if (!document.getElementById('view-bareme').classList.contains('hidden')) {
+                renderBaremeTable();
+            }
+
+            saveDraft();
+        }
+
+        function updateStatusBanner(m) {
+            const card = document.getElementById('status-card');
+            const headline = document.getElementById('status-headline');
+            const subline = document.getElementById('status-subline');
+            const badge = document.getElementById('status-badge');
+            const headerBadge = document.getElementById('header-status-badge');
+            const progLeft = document.getElementById('prog-left');
+            const progRight = document.getElementById('prog-right');
+            const progBar = document.getElementById('prog-bar');
+
+            const hasPrime = m.prime > 0;
+
+            if (hasPrime) {
+                card.className = 'p-4 rounded-2xl border-2 border-emerald-400 bg-gradient-to-br from-emerald-50 to-teal-50/70 text-emerald-950 transition-all duration-300';
+                headline.textContent = 'Bravo !!!!!';
+                headerBadge.textContent = 'Bravo !!!!!';
+                headerBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300';
+                badge.className = 'px-3 py-1.5 rounded-2xl bg-emerald-600 text-white text-sm sm:text-base font-black shrink-0 tabular-nums shadow-xs';
+                badge.textContent = `${formatDecimal(m.prime)} €`;
+                progBar.className = 'h-full rounded-full bg-emerald-500 transition-all duration-300';
+            } else {
+                card.className = 'p-4 rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/60 text-amber-950 transition-all duration-300';
+                headline.textContent = 'Oh nooooon !!!!!';
+                headerBadge.textContent = 'Oh nooooon !!!!!';
+                headerBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-900 border border-amber-200/80';
+                badge.className = 'px-3 py-1.5 rounded-2xl bg-amber-200/80 text-amber-900 text-sm sm:text-base font-black shrink-0 tabular-nums';
+                badge.textContent = '0,00 €';
+                progBar.className = 'h-full rounded-full bg-amber-500 transition-all duration-300';
+            }
+
+            progLeft.textContent = `${formatDecimal(m.cadence)} colis/h`;
+
+            if (m.nextTier) {
+                const diff = Math.max(0, m.nextTier.min - m.cadence);
+                subline.textContent = `Plus que ${formatDecimal(diff)} colis/h majorés pour atteindre ${formatDecimal(m.nextTier.prime)} €`;
+                progRight.textContent = `Prochain palier : ${m.nextTier.min} c/h (${formatDecimal(m.nextTier.prime)} €)`;
+
+                const floor = m.currentTier.min;
+                const ceil = m.nextTier.min;
+                const pct = Math.min(100, Math.max(0, ((m.cadence - floor) / (ceil - floor)) * 100));
+                progBar.style.width = `${pct}%`;
+            } else {
+                subline.textContent = 'Palier maximum atteint ! Félicitations !';
+                progRight.textContent = 'Palier Max (≥ 269 c/h)';
+                progBar.style.width = '100%';
+            }
+        }
+
+        /**
+         * =========================================================================
+         * VUE 2 : CALCULE SEMAINE & EXPORT CSV
+         * =========================================================================
+         */
+        function saveDayToWeek() {
+            const m = computeMetrics();
+            const week = parseInt(document.getElementById('save-week-select').value, 10);
+            const dayName = document.getElementById('save-day-select').value;
+
+            const record = {
+                id: `${week}-${dayName}`,
+                week,
+                dayName,
+                date: state.date,
+                shift: state.shift,
+                overtime: state.overtime,
+                rawBrasserie: m.rawBrasserie,
+                rawEpicerie: m.rawEpicerie,
+                rawProxi: m.rawProxi,
+                totalRawColis: m.totalRawColis,
+                brasserie: m.subBrasserie,
+                epicerie: m.subEpicerie,
+                proxi: m.subProxi,
+                totalMajoreColis: m.totalMajoreColis,
+                netProdHours: m.netProdHours,
+                cadence: m.cadence,
+                prime: m.prime
+            };
+
+            const existingIdx = state.history.findIndex(item => item.week === week && item.dayName === dayName);
+            if (existingIdx !== -1) {
+                state.history[existingIdx] = record;
+            } else {
+                state.history.push(record);
+            }
+
+            state.selectedWeekFilter = week;
+            saveHistory();
+            updateWeekBadge();
+            showToast(`Journée enregistrée : Semaine ${week} (${dayName})`);
+        }
+
+        function deleteWeekRecord(id) {
+            state.history = state.history.filter(item => item.id !== id);
+            saveHistory();
+            updateWeekBadge();
+            renderWeekView();
+            showToast('Journée supprimée');
+        }
+
+        function selectWeekFilter(w) {
+            state.selectedWeekFilter = w;
+            renderWeekView();
+        }
+
+        function updateWeekBadge() {
+            const badge = document.getElementById('week-badge-count');
+            if (state.history.length > 0) {
+                badge.textContent = state.history.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function renderWeekView() {
+            document.querySelectorAll('.wfilter-btn').forEach(btn => {
+                const isSelected = parseInt(btn.dataset.wfilter, 10) === state.selectedWeekFilter;
+                btn.className = isSelected
+                    ? 'wfilter-btn py-2 rounded-xl text-xs font-extrabold bg-white text-indigo-600 shadow-2xs transition'
+                    : 'wfilter-btn py-2 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition';
+            });
+
+            const weekRecords = state.history.filter(r => r.week === state.selectedWeekFilter);
+
+            const sumMajore = weekRecords.reduce((a, b) => a + (b.totalMajoreColis ?? b.totalColis ?? 0), 0);
+            const sumHours = weekRecords.reduce((a, b) => a + b.netProdHours, 0);
+            const sumPrime = weekRecords.reduce((a, b) => a + b.prime, 0);
+            const avgCadence = sumHours > 0 ? (sumMajore / sumHours) : 0;
+
+            document.getElementById('week-sum-colis').textContent = formatNumber(sumMajore);
+            document.getElementById('week-sum-hours').textContent = `${formatDecimal(sumHours)} h`;
+            document.getElementById('week-avg-cadence').textContent = formatDecimal(avgCadence);
+            document.getElementById('week-sum-prime').textContent = `${formatDecimal(sumPrime)} €`;
+
+            const container = document.getElementById('week-days-list');
+            container.innerHTML = DAYS_ORDER.map(day => {
+                const rec = weekRecords.find(r => r.dayName === day);
+                if (!rec) {
+                    return `
+                        <div class="p-3 rounded-2xl bg-slate-50/70 border border-dashed border-slate-200 flex items-center justify-between text-slate-400">
+                            <span class="text-xs font-bold">${day}</span>
+                            <span class="text-[11px] italic">Non renseigné</span>
+                        </div>
+                    `;
+                }
+
+                const majTotal = rec.totalMajoreColis ?? rec.totalColis ?? 0;
+                const rawTotal = rec.totalRawColis ?? majTotal;
+
+                return `
+                    <div class="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-extrabold text-slate-900">${rec.dayName}</span>
+                                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">${rec.shift}</span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-0.5 tabular-nums">
+                                <span class="font-bold text-violet-700">${formatNumber(majTotal)}</span> majorés <span class="text-slate-400">(${formatNumber(rawTotal)} bruts)</span> • 
+                                <span>${formatDecimal(rec.netProdHours)} h</span> • 
+                                <span class="font-bold text-indigo-600">${formatDecimal(rec.cadence)} c/h</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="px-2.5 py-1 rounded-xl ${rec.prime > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'} text-xs font-black tabular-nums">
+                                ${formatDecimal(rec.prime)} €
+                            </span>
+                            <button type="button" onclick="deleteWeekRecord('${rec.id}')" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="Supprimer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportCSV() {
+            if (state.history.length === 0) {
+                showToast('Aucune journée enregistrée à exporter');
+                return;
+            }
+
+            const headers = [
+                'Semaine', 'Jour', 'Date', 'Poste', 'Heure_Sup',
+                'Brut_Brasserie', 'Majore_Brasserie_x1_20',
+                'Brut_Epicerie', 'Majore_Epicerie_x1_33',
+                'Brut_Proxi', 'Majore_Proxi_x1_80',
+                'Total_Colis_Bruts', 'Total_Colis_Majores',
+                'Temps_Production_Net_h', 'Cadence_Majoree_Colis_Heure', 'Prime_EUR'
+            ];
+
+            const sorted = [...state.history].sort((a, b) => {
+                if (a.week !== b.week) return a.week - b.week;
+                return DAYS_ORDER.indexOf(a.dayName) - DAYS_ORDER.indexOf(b.dayName);
+            });
+
+            const rows = sorted.map(r => {
+                const majTotal = r.totalMajoreColis ?? r.totalColis ?? 0;
+                const rawTotal = r.totalRawColis ?? majTotal;
+                return [
+                    `Semaine ${r.week}`,
+                    r.dayName,
+                    r.date,
+                    r.shift,
+                    r.overtime ? 'OUI' : 'NON',
+                    String(r.rawBrasserie ?? 0).replace('.', ','),
+                    String(r.brasserie ?? 0).replace('.', ','),
+                    String(r.rawEpicerie ?? 0).replace('.', ','),
+                    String(r.epicerie ?? 0).replace('.', ','),
+                    String(r.rawProxi ?? 0).replace('.', ','),
+                    String(r.proxi ?? 0).replace('.', ','),
+                    String(rawTotal).replace('.', ','),
+                    String(majTotal).replace('.', ','),
+                    r.netProdHours.toFixed(2).replace('.', ','),
+                    r.cadence.toFixed(2).replace('.', ','),
+                    r.prime.toFixed(2).replace('.', ',')
+                ];
+            });
+
+            const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Suivi_Prod_Primes_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showToast('Fichier CSV exporté avec succès');
+        }
+
+        /**
+         * =========================================================================
+         * VUE 3 : RENDU DU BARÈME COMPLET
+         * =========================================================================
+         */
+        function renderBaremeTable() {
+            const m = computeMetrics();
+            const container = document.getElementById('bareme-table');
+
+            container.innerHTML = PRIME_TIERS.map((tier, idx) => {
+                const isActive = idx === m.currentTierIndex;
+                return `
+                    <div class="px-3.5 py-2.5 rounded-2xl border flex items-center justify-between transition ${
+                        isActive
+                            ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500/20 text-emerald-950 font-extrabold'
+                            : 'bg-slate-50/80 border-slate-200/80 text-slate-700 font-semibold'
+                    }">
+                        <div class="flex items-center gap-2 text-xs">
+                            ${isActive ? '<span class="w-2 h-2 rounded-full bg-emerald-500"></span>' : ''}
+                            <span>${tier.label} colis/h</span>
+                        </div>
+                        <span class="text-xs sm:text-sm font-black tabular-nums ${isActive ? 'text-emerald-700' : 'text-slate-900'}">
+                            ${formatDecimal(tier.prime)} €
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * =========================================================================
+         * EXEMPLE & RÉINITIALISATION
+         * =========================================================================
+         */
+        function loadDemoData() {
+            state.shift = 'Après-Midi';
+            state.startTime = '13:15';
+            state.endTime = '20:45';
+            state.overtime = false;
+            state.activeRayon = 'Epicerie';
+
+            state.colis = {
+                Brasserie: [120, 85],
+                Epicerie: [210, 175, 140],
+                Proxi: [65, 50]
+            };
+
+            state.deductions = {
+                pause: true,    // -0,50 h
+                wakeup: true,   // -0,17 h
+                battery: false  // 0,00 h
+            };
+
+            document.getElementById('farine-h').value = 0;
+            document.getElementById('farine-m').value = 30;
+            document.getElementById('signed-h').value = 0;
+            document.getElementById('signed-m').value = 30;
+
+            syncAllUI();
+            renderColisEntries();
+            recalculateAll();
+            showToast('Exemple chargé avec majorations ×1,20 / ×1,33 / ×1,80');
+        }
+
+        function openResetModal() {
+            document.getElementById('modal-title').textContent = 'Réinitialiser la journée ?';
+            document.getElementById('modal-desc').textContent = 'Tous les colis saisis et les temps déduits de la journée en cours seront remis à zéro.';
+            modalCallback = () => {
+                state.colis = { Brasserie: [], Epicerie: [], Proxi: [] };
+                state.deductions = { pause: true, wakeup: true, battery: false };
+                state.overtime = false;
+                document.getElementById('farine-h').value = 0;
+                document.getElementById('farine-m').value = 0;
+                document.getElementById('signed-h').value = 0;
+                document.getElementById('signed-m').value = 0;
+                syncAllUI();
+                renderColisEntries();
+                recalculateAll();
+                showToast('Journée réinitialisée');
+            };
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modalCallback = null;
+        }
+
+        document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+            if (modalCallback) modalCallback();
+            closeConfirmModal();
+        });
+
+        /**
+         * =========================================================================
+         * PERSISTANCE LOCALSTORAGE & TOAST
+         * =========================================================================
+         */
+        function saveDraft() {
+            try {
+                const payload = {
+                    date: state.date,
+                    shift: state.shift,
+                    startTime: state.startTime,
+                    endTime: state.endTime,
+                    overtime: state.overtime,
+                    activeRayon: state.activeRayon,
+                    colis: state.colis,
+                    deductions: state.deductions,
+                    farineH: document.getElementById('farine-h').value,
+                    farineM: document.getElementById('farine-m').value,
+                    signedH: document.getElementById('signed-h').value,
+                    signedM: document.getElementById('signed-m').value
+                };
+                localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(payload));
+            } catch (e) { /* Ignore storage errors */ }
+        }
+
+        function saveHistory() {
+            try {
+                localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(state.history));
+            } catch (e) { /* Ignore storage errors */ }
+        }
+
+        function loadFromStorage() {
+            try {
+                const histRaw = localStorage.getItem(STORAGE_HISTORY_KEY);
+                if (histRaw) state.history = JSON.parse(histRaw);
+
+                const draftRaw = localStorage.getItem(STORAGE_DRAFT_KEY);
+                if (draftRaw) {
+                    const d = JSON.parse(draftRaw);
+                    if (d.date) state.date = d.date;
+                    if (d.shift) state.shift = d.shift;
+                    if (d.startTime) state.startTime = d.startTime;
+                    if (d.endTime) state.endTime = d.endTime;
+                    if (typeof d.overtime === 'boolean') state.overtime = d.overtime;
+                    if (d.activeRayon) state.activeRayon = d.activeRayon;
+                    if (d.colis) state.colis = d.colis;
+                    if (d.deductions) state.deductions = d.deductions;
+                    if (d.farineH !== undefined) document.getElementById('farine-h').value = d.farineH;
+                    if (d.farineM !== undefined) document.getElementById('farine-m').value = d.farineM;
+                    if (d.signedH !== undefined) document.getElementById('signed-h').value = d.signedH;
+                    if (d.signedM !== undefined) document.getElementById('signed-m').value = d.signedM;
+                }
+            } catch (e) { /* Ignore parse errors */ }
+        }
+
+        let toastTimer = null;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 2600);
+        }
+
+        function syncAllUI() {
+            document.getElementById('input-date').value = state.date;
+            const dayName = getDayNameFromDate(state.date);
+            document.getElementById('detected-weekday').textContent = dayName;
+            document.getElementById('save-day-select').value = dayName;
+
+            document.getElementById('input-start').value = state.startTime;
+            document.getElementById('input-end').value = state.endTime;
+
+            updateShiftUI();
+            updateOvertimeUI();
+            updateRayonUI();
+            updateDeductionsUI();
+            updateWeekBadge();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            syncAllUI();
+            renderColisEntries();
+            recalculateAll();
+        });
+    </script>
+</body>
+</html>
